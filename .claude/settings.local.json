@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dart analyze:*)",
+      "Bash(dart run:*)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && flutter devices 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && flutter run -d chrome 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase --version 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase status 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase db push 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase migration list 2>&1 | head -5)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase db push --password '!@dminHris_System1995*' 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase db push --password '!@dminHris_System1995*' --debug 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase functions deploy generate-employee-code --password '!@dminHris_System1995*' 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\mAnoL\\\\Documents\\\\dev\\\\Portfolio\\\\Github\\\\hris_app\" && supabase functions deploy generate-employee-code --project-ref tddlbfkkwfhfpcoyhzjb 2>&1)"
+    ]
+  }
+}
