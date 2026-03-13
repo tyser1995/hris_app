@@ -34,6 +34,7 @@ A full-featured **Human Resource Information System** built with **Flutter** and
 ```
 lib/
 ├── core/
+│   ├── config/             # AppConfig (isMockMode flag)
 │   ├── constants/          # AppColors, AppStrings, AppPermissions (permission registry)
 │   ├── errors/             # AppException hierarchy, ErrorMapper (PostgrestException → typed errors)
 │   └── utils/              # EmployeeCodeGenerator (pattern token substitution)
@@ -48,6 +49,10 @@ lib/
 ├── providers/              # Riverpod state providers
 │   ├── settings_provider.dart
 │   └── permission_provider.dart   # StateNotifier with optimistic toggle updates
+├── mock/                   # Demo/presentation mode (no Supabase required)
+│   ├── mock_data_store.dart        # 21 employees, attendance, leave, notifications
+│   ├── mock_services.dart          # Service subclasses with in-memory implementations
+│   └── mock_overrides.dart         # Riverpod provider override list + fake auth session
 ├── shared/
 │   ├── layouts/            # AdminShell: responsive sidebar + mobile bottom nav
 │   └── widgets/            # HrisLoadingWidget, HrisErrorWidget, LoadingOverlay
@@ -70,6 +75,8 @@ supabase/
 │   ├── 001–010             # Core schema, RLS policies, indexes
 │   ├── 011_create_company_settings.sql   # Singleton settings row + next_employee_code() fn
 │   └── 012_create_permissions.sql        # role_permissions table + seeded defaults
+├── seeds/
+│   └── demo_data.sql       # 20-employee demo dataset (attendance, leave, notifications)
 └── functions/              # Edge functions (TypeScript / Deno)
     ├── compute-attendance/       # Late/OT calculation
     ├── approve-leave/            # Approval workflow
@@ -143,7 +150,24 @@ All service methods map raw Supabase/network errors to typed `AppException` subt
 - Supabase project (create at [supabase.com](https://supabase.com))
 - Supabase CLI (`npm install -g supabase`)
 
-### Setup
+### Demo Mode (no Supabase required)
+
+Run the app instantly with pre-loaded mock data — no Supabase project needed:
+
+```bash
+flutter run -d chrome --dart-define=ENV_FILE=.env.demo
+```
+
+The demo loads 21 employees across 4 departments with realistic attendance, leave, and notification data. All reads and writes work in-memory for the duration of the session.
+
+**Demo data highlights:**
+- 15 present, 2 late, 3 absent, 1 on leave (today)
+- 2 employees with contracts expiring within 30 days
+- 6 leave requests in various approval states
+- 4 unread notifications (contract expiry + pending leave)
+- Logged in as Admin with full access
+
+### Setup (with real Supabase)
 
 1. **Clone and install dependencies**
    ```bash
@@ -159,6 +183,7 @@ All service methods map raw Supabase/network errors to typed `AppException` subt
    ```
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_ANON_KEY=your-anon-key
+   MOCK_DATA=false
    ```
 
 3. **Link your Supabase project**
@@ -180,7 +205,11 @@ All service methods map raw Supabase/network errors to typed `AppException` subt
    supabase functions deploy generate-employee-code --project-ref your-project-ref
    ```
 
-6. **Run the app**
+6. **(Optional) Seed demo data**
+
+   Run `supabase/seeds/demo_data.sql` in the Supabase SQL editor to populate the database with 20 employees, 2 weeks of attendance history, leave requests, and notifications.
+
+7. **Run the app**
    ```bash
    # Web (HR Dashboard)
    flutter run -d chrome
