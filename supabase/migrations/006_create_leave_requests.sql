@@ -39,4 +39,4 @@ create table leave_balances (
 
 create trigger leave_requests_updated_at
   before update on leave_requests
-  for each row execute function update_updated_at_column();
+  for each row execute function hris.update_updated_at_column();

@@ -1,7 +1,7 @@
 -- Migration: 012_create_permissions.sql
 -- Role-based permission matrix: stores per-role permission toggles.
 
-create table if not exists public.role_permissions (
+create table if not exists role_permissions (
   id             bigint generated always as identity primary key,
   role           text        not null,
   permission_key text        not null,
@@ -11,24 +11,25 @@ create table if not exists public.role_permissions (
 );
 
 -- ── Trigger: keep updated_at fresh ───────────────────────────────────────────
--- (reuses set_updated_at() if already created by 011)
-create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+create or replace function hris.set_updated_at()
+returns trigger language plpgsql
+set search_path = hris, extensions
+as $$
 begin
   new.updated_at = now();
   return new;
 end;
 $$;
 
-drop trigger if exists trg_role_permissions_updated_at on public.role_permissions;
+drop trigger if exists trg_role_permissions_updated_at on role_permissions;
 create trigger trg_role_permissions_updated_at
-  before update on public.role_permissions
-  for each row execute function public.set_updated_at();
+  before update on role_permissions
+  for each row execute function hris.set_updated_at();
 
 -- ── Default seed data ─────────────────────────────────────────────────────────
 
 -- Admin: all permissions
-insert into public.role_permissions (role, permission_key, granted) values
+insert into role_permissions (role, permission_key, granted) values
   ('admin', 'employees.view',       true),
   ('admin', 'employees.create',     true),
   ('admin', 'employees.edit',       true),
@@ -47,7 +48,7 @@ insert into public.role_permissions (role, permission_key, granted) values
 on conflict (role, permission_key) do nothing;
 
 -- HR Staff
-insert into public.role_permissions (role, permission_key, granted) values
+insert into role_permissions (role, permission_key, granted) values
   ('hr_staff', 'employees.view',       true),
   ('hr_staff', 'employees.create',     true),
   ('hr_staff', 'employees.edit',       true),
@@ -66,7 +67,7 @@ insert into public.role_permissions (role, permission_key, granted) values
 on conflict (role, permission_key) do nothing;
 
 -- Department Head
-insert into public.role_permissions (role, permission_key, granted) values
+insert into role_permissions (role, permission_key, granted) values
   ('department_head', 'employees.view',       true),
   ('department_head', 'employees.create',     false),
   ('department_head', 'employees.edit',       false),
@@ -85,7 +86,7 @@ insert into public.role_permissions (role, permission_key, granted) values
 on conflict (role, permission_key) do nothing;
 
 -- Supervisor
-insert into public.role_permissions (role, permission_key, granted) values
+insert into role_permissions (role, permission_key, granted) values
   ('supervisor', 'employees.view',       true),
   ('supervisor', 'employees.create',     false),
   ('supervisor', 'employees.edit',       false),
@@ -104,7 +105,7 @@ insert into public.role_permissions (role, permission_key, granted) values
 on conflict (role, permission_key) do nothing;
 
 -- Employee
-insert into public.role_permissions (role, permission_key, granted) values
+insert into role_permissions (role, permission_key, granted) values
   ('employee', 'employees.view',       false),
   ('employee', 'employees.create',     false),
   ('employee', 'employees.edit',       false),
@@ -123,14 +124,14 @@ insert into public.role_permissions (role, permission_key, granted) values
 on conflict (role, permission_key) do nothing;
 
 -- ── Row-Level Security ────────────────────────────────────────────────────────
-alter table public.role_permissions enable row level security;
+alter table role_permissions enable row level security;
 
 create policy "Authenticated users can read permissions"
-  on public.role_permissions for select
+  on role_permissions for select
   to authenticated
   using (true);
 
 create policy "Admins can manage permissions"
-  on public.role_permissions for all
+  on role_permissions for all
   to authenticated
   using (get_my_role() = 'admin');

@@ -42,7 +42,7 @@ alter table departments
   foreign key (head_id) references employees(id) on delete set null;
 
 -- Trigger to auto-update updated_at
-create or replace function update_updated_at_column()
+create or replace function hris.update_updated_at_column()
 returns trigger language plpgsql as $$
 begin
   new.updated_at = now();
@@ -52,4 +52,4 @@ $$;
 
 create trigger employees_updated_at
   before update on employees
-  for each row execute function update_updated_at_column();
+  for each row execute function hris.update_updated_at_column();
