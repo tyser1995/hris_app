@@ -20,7 +20,7 @@ on conflict (id) do nothing;
 -- Auto-update updated_at on every write
 create trigger company_settings_updated_at
   before update on company_settings
-  for each row execute function update_updated_at_column();
+  for each row execute function hris.update_updated_at_column();
 
 -- ── RLS ───────────────────────────────────────────────────────────────────────
 
@@ -49,10 +49,11 @@ create policy "company_settings_write_admin_hr" on company_settings
 --   DD    →  2-digit day         (e.g. 15)
 --   ###   →  zero-padded seq, width = number of '#' chars  (e.g. 001)
 
-create or replace function next_employee_code()
+create or replace function hris.next_employee_code()
 returns text
 language plpgsql
 security definer   -- runs as owner so RLS is bypassed for the update
+set search_path = hris, extensions
 as $$
 declare
   v_pattern  text;
@@ -93,4 +94,4 @@ $$;
 
 -- Grant execute to authenticated users so the edge function (service role)
 -- and direct RPC calls both work.
-grant execute on function next_employee_code() to authenticated;
+grant execute on function hris.next_employee_code() to authenticated;

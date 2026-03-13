@@ -20,6 +20,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? 'https://placeholder.supabase.co',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? 'placeholder_key',
+    postgrestOptions: const PostgrestClientOptions(schema: 'hris'),
   );
 
   final overrides = AppConfig.isMockMode ? MockOverrides.all : <Override>[];

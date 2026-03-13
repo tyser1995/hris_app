@@ -14,14 +14,18 @@ alter table employee_documents enable row level security;
 alter table user_roles enable row level security;
 
 -- Helper: get current user's role
-create or replace function get_my_role()
-returns user_role language sql security definer stable as $$
+create or replace function hris.get_my_role()
+returns user_role language sql security definer stable
+set search_path = hris, extensions
+as $$
   select role from user_roles where user_id = (select auth.uid()) limit 1;
 $$;
 
 -- Helper: get current user's employee id
-create or replace function get_my_employee_id()
-returns uuid language sql security definer stable as $$
+create or replace function hris.get_my_employee_id()
+returns uuid language sql security definer stable
+set search_path = hris, extensions
+as $$
   select id from employees where user_id = (select auth.uid()) limit 1;
 $$;
 

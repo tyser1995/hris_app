@@ -24,4 +24,4 @@ create table attendance (
 
 create trigger attendance_updated_at
   before update on attendance
-  for each row execute function update_updated_at_column();
+  for each row execute function hris.update_updated_at_column();

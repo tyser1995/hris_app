@@ -71,34 +71,51 @@ lib/
         └── access_management_screen.dart  # Role permission toggles
 
 supabase/
-├── migrations/             # 12 ordered SQL migration files
-│   ├── 001–010             # Core schema, RLS policies, indexes
-│   ├── 011_create_company_settings.sql   # Singleton settings row + next_employee_code() fn
-│   └── 012_create_permissions.sql        # role_permissions table + seeded defaults
+├── migrations/             # 13 ordered SQL migration files
+│   ├── 001_create_roles.sql              # hris schema, search_path, user_role enum, user_roles table
+│   ├── 002–008                           # Core tables: departments, employees, schedules, attendance, leave, notifications, documents
+│   ├── 009_rls_policies.sql              # RLS policies + hris.get_my_role() / hris.get_my_employee_id()
+│   ├── 010_indexes.sql                   # Composite indexes for high-traffic tables
+│   ├── 011_create_company_settings.sql   # Singleton settings row + hris.next_employee_code()
+│   ├── 012_create_permissions.sql        # role_permissions table + seeded defaults per role
+│   └── 013_seed_demo_data.sql            # 20-employee demo dataset (attendance, leave, notifications)
 ├── seeds/
-│   └── demo_data.sql       # 20-employee demo dataset (attendance, leave, notifications)
-└── functions/              # Edge functions (TypeScript / Deno)
-    ├── compute-attendance/       # Late/OT calculation
-    ├── approve-leave/            # Approval workflow
-    ├── notify-trigger/           # Contract & late alerts
-    ├── payroll-export/           # Monthly payroll data
-    └── generate-employee-code/   # Atomic sequence increment + code generation
+│   └── demo_data.sql       # Same dataset as 013 — run manually via SQL Editor
+├── functions/              # Edge functions (TypeScript / Deno)
+│   ├── compute-attendance/       # Late/OT calculation
+│   ├── approve-leave/            # Approval workflow
+│   ├── notify-trigger/           # Contract & late alerts
+│   ├── payroll-export/           # Monthly payroll data
+│   └── generate-employee-code/   # Atomic sequence increment + code generation
+└── reset_to_hris.sql       # Drops all app objects from public + hris and clears migration history
 ```
 
 ## Database Schema
 
+All tables and functions live in the **`hris` schema**. The `public` schema is untouched.
+
 Core tables with Row Level Security (RLS):
 
-- `user_roles` — Auth and role assignments
-- `employees` — Personnel records (8,000+ employees)
-- `departments` / `positions` — Org structure
-- `schedules` / `schedule_details` — Shift configuration
-- `attendance` — Daily logs (~2.9M rows/year), indexed for performance
-- `leave_requests` / `leave_balances` — Leave tracking
-- `notifications` — In-app notifications
-- `employee_documents` — Contract and ID storage
-- `company_settings` — Singleton row: employee code pattern + sequence counter
-- `role_permissions` — Per-role feature permission matrix (15 permissions × 5 roles)
+- `hris.user_roles` — Auth and role assignments
+- `hris.employees` — Personnel records (8,000+ employees)
+- `hris.departments` / `hris.positions` — Org structure
+- `hris.schedules` / `hris.schedule_details` — Shift configuration
+- `hris.attendance` — Daily logs (~2.9M rows/year), indexed for performance
+- `hris.leave_requests` / `hris.leave_balances` — Leave tracking
+- `hris.notifications` — In-app notifications
+- `hris.employee_documents` — Contract and ID storage
+- `hris.company_settings` — Singleton row: employee code pattern + sequence counter
+- `hris.role_permissions` — Per-role feature permission matrix (15 permissions × 5 roles)
+
+Database functions (all in `hris` schema):
+
+| Function | Description |
+|---|---|
+| `hris.get_my_role()` | Returns the current user's role from `user_roles` |
+| `hris.get_my_employee_id()` | Returns the current user's employee UUID |
+| `hris.next_employee_code()` | Atomically increments sequence and returns generated code |
+| `hris.update_updated_at_column()` | Trigger function: sets `updated_at = now()` |
+| `hris.set_updated_at()` | Trigger function: sets `updated_at = now()` on `role_permissions` |
 
 ## User Roles & Permissions
 
@@ -110,7 +127,7 @@ Core tables with Row Level Security (RLS):
 | Supervisor | View employees, attendance, leave approval, scheduling |
 | Employee | Self-service portal: own attendance, own leave requests |
 
-Permissions are managed in **Settings → Access Management** and stored in the `role_permissions` table. Toggles apply optimistically in the UI and persist to Supabase in real time.
+Permissions are managed in **Settings → Access Management** and stored in the `hris.role_permissions` table. Toggles apply optimistically in the UI and persist to Supabase in real time.
 
 ## Employee Code Generation
 
@@ -127,7 +144,7 @@ Employee IDs are generated from a configurable pattern defined in **Settings →
 
 **Example:** pattern `YY-E###-MM` → `26-E001-03`, `26-E002-03`, ...
 
-Sequence increments are handled atomically by the `generate-employee-code` edge function, which calls `next_employee_code()` — a Postgres function that runs `UPDATE ... RETURNING` under a row-level lock — preventing duplicate codes under concurrent employee creation.
+Sequence increments are handled atomically by the `generate-employee-code` edge function, which calls `hris.next_employee_code()` — a Postgres function that runs `UPDATE ... RETURNING` under a row-level lock — preventing duplicate codes under concurrent employee creation.
 
 ## Error Handling
 
@@ -192,8 +209,15 @@ The demo loads 21 employees across 4 departments with realistic attendance, leav
    ```
 
 4. **Run database migrations**
+
+   If this is a fresh project, push all migrations:
    ```bash
    supabase db push --password "your-db-password"
+   ```
+
+   If you need to reset an existing database (e.g., tables ended up in the wrong schema), run `supabase/reset_to_hris.sql` in the Supabase SQL Editor first, then push:
+   ```bash
+   supabase db push --password "your-db-password" --debug
    ```
 
 5. **Deploy edge functions**
@@ -207,7 +231,9 @@ The demo loads 21 employees across 4 departments with realistic attendance, leav
 
 6. **(Optional) Seed demo data**
 
-   Run `supabase/seeds/demo_data.sql` in the Supabase SQL editor to populate the database with 20 employees, 2 weeks of attendance history, leave requests, and notifications.
+   Run `supabase/seeds/demo_data.sql` in the Supabase SQL Editor to populate the database with 20 employees, 2 weeks of attendance history, leave requests, and notifications.
+
+   > The seed script requires `devresty2024@gmail.com` to exist in Supabase Auth. Create the user in the Supabase Dashboard → Authentication → Users → Add user, then the seed will automatically insert the admin role and employee record.
 
 7. **Run the app**
    ```bash
@@ -238,3 +264,4 @@ Designed for 8,000 employees (~2.9M attendance rows/year):
 - Attendance dashboard uses Supabase Realtime streaming filtered to today's records only
 - Attendance computation (late/OT) runs server-side via edge function, not on the client
 - Employee code sequence uses `UPDATE ... RETURNING` under a row-level lock to prevent race conditions under concurrent inserts
+- All tables and functions are scoped to the `hris` schema, keeping the `public` schema clean
