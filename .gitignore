@@ -4,6 +4,9 @@
 !.env.example
 !.env.demo
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Miscellaneous
 *.class
 *.log
