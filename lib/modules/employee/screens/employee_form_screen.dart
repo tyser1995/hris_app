@@ -5,6 +5,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/employee_provider.dart';
 import '../../../providers/department_provider.dart';
+import '../../../providers/employment_type_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 
@@ -29,7 +30,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
-  String _employmentType = 'regular';
+  String? _employmentType;
   String? _departmentId;
   String? _positionId;
   DateTime? _hireDate;
@@ -128,7 +129,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       'email': _emailCtrl.text.trim(),
       if (_phoneCtrl.text.isNotEmpty) 'phone': _phoneCtrl.text.trim(),
       if (_addressCtrl.text.isNotEmpty) 'address': _addressCtrl.text.trim(),
-      'employment_type': _employmentType,
+      'employment_type': _employmentType ?? 'Regular',
       if (_departmentId != null) 'department_id': _departmentId,
       if (_positionId != null) 'position_id': _positionId,
       'hire_date': _hireDate!.toIso8601String().substring(0, 10),
@@ -263,23 +264,35 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                   validator: Validators.phone,
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _employmentType,
-                  decoration:
-                      const InputDecoration(labelText: 'Employment Type'),
-                  items: const [
-                    DropdownMenuItem(value: 'regular', child: Text('Regular')),
-                    DropdownMenuItem(
-                        value: 'job_order', child: Text('Job Order')),
-                    DropdownMenuItem(
-                        value: 'contractual', child: Text('Contractual')),
-                    DropdownMenuItem(
-                        value: 'faculty', child: Text('Faculty')),
-                    DropdownMenuItem(
-                        value: 'janitorial', child: Text('Janitorial')),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _employmentType = v!),
+                ref.watch(employmentTypesProvider).when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const SizedBox(),
+                  data: (types) {
+                    // Auto-select first type when creating a new employee
+                    if (_employmentType == null && types.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _employmentType = types.first.name);
+                        }
+                      });
+                    }
+                    final validValue = types.any((t) => t.name == _employmentType)
+                        ? _employmentType
+                        : null;
+                    return DropdownButtonFormField<String>(
+                      value: validValue,
+                      decoration: const InputDecoration(
+                          labelText: 'Employment Type'),
+                      items: types
+                          .map((t) => DropdownMenuItem(
+                              value: t.name, child: Text(t.name)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _employmentType = v),
+                      validator: (v) => v == null
+                          ? 'Please select an employment type'
+                          : null,
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 departments.when(

@@ -209,6 +209,11 @@ class AppPermissions {
           label: 'Access Settings',
           description: 'Open the Settings configuration screen',
         ),
+        AppPermission(
+          key: 'settings.data_management',
+          label: 'Data Management',
+          description: 'Manage reference data such as employment types',
+        ),
       ],
     ),
   ];
@@ -232,6 +237,7 @@ class AppPermissions {
       'reports.export': true,
       'notifications.view': true,
       'settings.view': true,
+      'settings.data_management': true,
     },
     'hr_staff': {
       'employees.view': true,
@@ -249,6 +255,7 @@ class AppPermissions {
       'reports.export': true,
       'notifications.view': true,
       'settings.view': true,
+      'settings.data_management': true,
     },
     'department_head': {
       'employees.view': true,
@@ -266,6 +273,7 @@ class AppPermissions {
       'reports.export': false,
       'notifications.view': true,
       'settings.view': false,
+      'settings.data_management': false,
     },
     'supervisor': {
       'employees.view': true,
@@ -283,6 +291,7 @@ class AppPermissions {
       'reports.export': false,
       'notifications.view': true,
       'settings.view': false,
+      'settings.data_management': false,
     },
     'employee': {
       'employees.view': false,
@@ -300,6 +309,7 @@ class AppPermissions {
       'reports.export': false,
       'notifications.view': true,
       'settings.view': false,
+      'settings.data_management': false,
     },
   };
 
