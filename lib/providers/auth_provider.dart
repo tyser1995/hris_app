@@ -31,3 +31,8 @@ final isSupervisorOrAboveProvider = Provider<bool>((ref) {
   final role = ref.watch(currentUserRoleProvider).valueOrNull;
   return ['admin', 'hr_staff', 'department_head', 'supervisor'].contains(role);
 });
+
+final isSuperAdminProvider = Provider<bool>((ref) {
+  final role = ref.watch(currentUserRoleProvider).valueOrNull;
+  return role == 'super_admin';
+});

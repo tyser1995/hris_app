@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/attendance_provider.dart';
+import '../../../providers/employee_provider.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 
 class CheckInScreen extends ConsumerStatefulWidget {
@@ -30,9 +31,13 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final employee =
+          await ref.read(employeeServiceProvider).getEmployee(employeeId);
+      final scheduleId = employee?.scheduleId ?? 'default';
+
       await ref.read(attendanceServiceProvider).checkIn(
             employeeId: employeeId,
-            scheduleId: 'default', // TODO: fetch from employee profile
+            scheduleId: scheduleId,
             source: 'mobile',
           );
       if (mounted) {

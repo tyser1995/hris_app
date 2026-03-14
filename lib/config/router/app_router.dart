@@ -24,10 +24,19 @@ import '../../modules/self_service/screens/my_attendance_screen.dart';
 import '../../modules/self_service/screens/my_leave_screen.dart';
 import '../../modules/settings/screens/settings_screen.dart';
 import '../../modules/settings/screens/access_management_screen.dart';
+import '../../modules/settings/screens/branding_screen.dart';
+import '../../modules/settings/screens/data_management_screen.dart';
+import '../../modules/settings/screens/employment_types_screen.dart';
+import '../../modules/super_admin/screens/organizations_screen.dart';
+import '../../modules/super_admin/screens/create_admin_screen.dart';
+import '../../modules/user_management/screens/users_screen.dart';
+import '../../modules/user_management/screens/invite_user_screen.dart';
 import 'route_names.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  // Watch role so router re-evaluates when role resolves after login
+  final roleAsync = ref.watch(currentUserRoleProvider);
 
   return GoRouter(
     initialLocation: '/login',
@@ -35,9 +44,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull?.session != null;
       final isLoginRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/forgot-password';
+      final role = roleAsync.valueOrNull;
 
       if (!isLoggedIn && !isLoginRoute) return '/login';
-      if (isLoggedIn && isLoginRoute) return '/dashboard';
+
+      if (isLoggedIn && isLoginRoute) {
+        // Wait for role to resolve before redirecting
+        if (role == null) return null;
+        return '/dashboard';
+      }
+
+      // Guard super-admin routes — only super_admin may access them
+      if (isLoggedIn && state.matchedLocation.startsWith('/super-admin')) {
+        if (role == null) return null; // wait for role to load
+        if (role != 'super_admin') return '/dashboard';
+      }
+
       return null;
     },
     routes: [
@@ -54,6 +76,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AdminShell(child: child),
         routes: [
+          // ── Super admin routes (inside shell so sidebar is visible) ───────
+          GoRoute(
+            path: '/super-admin',
+            name: RouteNames.superAdmin,
+            builder: (_, __) => const OrganizationsScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: RouteNames.createAdmin,
+                builder: (_, __) => const CreateAdminScreen(),
+              ),
+            ],
+          ),
           GoRoute(
             path: '/dashboard',
             name: RouteNames.dashboard,
@@ -156,6 +191,36 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'access',
                 name: RouteNames.accessManagement,
                 builder: (_, __) => const AccessManagementScreen(),
+              ),
+              GoRoute(
+                path: 'branding',
+                name: RouteNames.branding,
+                builder: (_, __) => const BrandingScreen(),
+              ),
+              GoRoute(
+                path: 'data-management',
+                name: RouteNames.dataManagement,
+                builder: (_, __) => const DataManagementScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'employment-types',
+                    name: RouteNames.employmentTypes,
+                    builder: (_, __) => const EmploymentTypesScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // User management (admin/hr)
+          GoRoute(
+            path: '/users',
+            name: RouteNames.users,
+            builder: (_, __) => const UsersScreen(),
+            routes: [
+              GoRoute(
+                path: 'invite',
+                name: RouteNames.inviteUser,
+                builder: (_, __) => const InviteUserScreen(),
               ),
             ],
           ),

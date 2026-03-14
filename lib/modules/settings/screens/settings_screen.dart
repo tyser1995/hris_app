@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/employee_code_generator.dart';
@@ -45,7 +46,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (pattern.isEmpty) return;
     setState(() => _isSaving = true);
     try {
-      await ref.read(settingsServiceProvider).updatePattern(pattern);
+      final settings = ref.read(companySettingsProvider).valueOrNull;
+      await ref.read(settingsServiceProvider).updatePattern(pattern,
+          organizationId: settings?.organizationId);
       ref.invalidate(companySettingsProvider);
       setState(() => _patternDirty = false);
       if (mounted) {
@@ -96,7 +99,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(settingsServiceProvider).resetSequence();
+      final settings = ref.read(companySettingsProvider).valueOrNull;
+      await ref.read(settingsServiceProvider)
+          .resetSequence(organizationId: settings?.organizationId);
       ref.invalidate(companySettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -419,6 +424,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // ── Data Management ───────────────────────────────────
+                    _SectionHeader(
+                      icon: Icons.storage_outlined,
+                      title: 'Data Management',
+                      subtitle:
+                          'Manage dropdown lists and reference data used across the system.',
+                    ),
+                    const SizedBox(height: 16),
+
+                    _Card(
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.storage_outlined,
+                              size: 18, color: AppColors.primary),
+                        ),
+                        title: const Text(
+                          'Data Management',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Employment types and other reference data.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.go('/settings/data-management'),
                       ),
                     ),
 
