@@ -45,7 +45,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (pattern.isEmpty) return;
     setState(() => _isSaving = true);
     try {
-      await ref.read(settingsServiceProvider).updatePattern(pattern);
+      final settings = ref.read(companySettingsProvider).valueOrNull;
+      await ref.read(settingsServiceProvider).updatePattern(pattern,
+          organizationId: settings?.organizationId);
       ref.invalidate(companySettingsProvider);
       setState(() => _patternDirty = false);
       if (mounted) {
@@ -96,7 +98,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(settingsServiceProvider).resetSequence();
+      final settings = ref.read(companySettingsProvider).valueOrNull;
+      await ref.read(settingsServiceProvider)
+          .resetSequence(organizationId: settings?.organizationId);
       ref.invalidate(companySettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -4,6 +4,8 @@ import '../models/department_model.dart';
 import '../models/employee_model.dart';
 import '../models/leave_request_model.dart';
 import '../models/notification_model.dart';
+import '../models/org_user_model.dart';
+import '../models/organization_model.dart';
 import '../models/position_model.dart';
 
 /// Central store of all in-memory mock data used in demo mode.
@@ -655,6 +657,64 @@ class MockDataStore {
 
   static List<NotificationModel> get unreadNotifications =>
       notifications.where((n) => !n.isRead).toList();
+
+  // ─── Organizations ────────────────────────────────────────────────────────
+
+  static final organizations = <OrganizationModel>[
+    OrganizationModel(
+      id: 'org-demo',
+      name: 'Demo Corporation',
+      systemTitle: 'Demo Corporation HRIS',
+      primaryColor: '#2563EB',
+      employeeCodePattern: 'YY-E###',
+      employeeCodeSequence: 21,
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  ];
+
+  // ─── Org Users ────────────────────────────────────────────────────────────
+
+  static final orgUsers = <OrgUserModel>[
+    OrgUserModel(
+      userId: adminUserId,
+      email: 'admin@demo.local',
+      role: 'admin',
+      organizationId: 'org-demo',
+      organizationName: 'Demo Corporation',
+      createdAt: DateTime(2024, 1, 1),
+      emailConfirmedAt: DateTime(2024, 1, 1),
+      lastSignInAt: DateTime(2026, 3, 14),
+    ),
+    OrgUserModel(
+      userId: 'mock-user-hr',
+      email: 'hr@demo.local',
+      role: 'hr_staff',
+      organizationId: 'org-demo',
+      organizationName: 'Demo Corporation',
+      createdAt: DateTime(2024, 2, 1),
+      emailConfirmedAt: DateTime(2024, 2, 1),
+      lastSignInAt: DateTime(2026, 3, 13),
+    ),
+    OrgUserModel(
+      userId: 'mock-user-supervisor',
+      email: 'supervisor@demo.local',
+      role: 'supervisor',
+      organizationId: 'org-demo',
+      organizationName: 'Demo Corporation',
+      createdAt: DateTime(2024, 3, 1),
+      emailConfirmedAt: DateTime(2024, 3, 1),
+      lastSignInAt: DateTime(2026, 3, 10),
+    ),
+    OrgUserModel(
+      userId: 'mock-user-pending',
+      email: 'pending@demo.local',
+      role: 'employee',
+      organizationId: 'org-demo',
+      organizationName: 'Demo Corporation',
+      createdAt: DateTime(2026, 3, 12),
+      // emailConfirmedAt is null — invitation not yet accepted
+    ),
+  ];
 
   // ─── Company Settings ─────────────────────────────────────────────────────
 

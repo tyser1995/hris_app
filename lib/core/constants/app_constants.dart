@@ -14,6 +14,7 @@ class AppConstants {
   static const String tableUserRoles = 'user_roles';
   static const String tableDocuments = 'employee_documents';
   static const String tableCompanySettings = 'company_settings';
+  static const String tableOrganizations = 'organizations';
 
   // Pagination
   static const int pageSize = 50;
@@ -21,6 +22,7 @@ class AppConstants {
   // Supabase storage buckets
   static const String bucketDocuments = 'employee-documents';
   static const String bucketAvatars = 'avatars';
+  static const String bucketLogos = 'logos';
 
   // Supabase edge functions
   static const String fnComputeAttendance = 'compute-attendance';
@@ -28,6 +30,10 @@ class AppConstants {
   static const String fnNotifyTrigger = 'notify-trigger';
   static const String fnPayrollExport = 'payroll-export';
   static const String fnGenerateEmployeeCode = 'generate-employee-code';
+  static const String fnCreateAdminUser = 'create-admin-user';
+  static const String fnDeleteOrganization = 'delete-organization';
+  static const String fnInviteUser = 'invite-user';
+  static const String fnCreateUser = 'create-user';
 
   // Grace period for late computation (minutes)
   static const int gracePeriodMinutes = 15;

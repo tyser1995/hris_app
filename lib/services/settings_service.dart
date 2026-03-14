@@ -2,9 +2,11 @@
 // Edge fn: supabase/functions/generate-employee-code/index.ts
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:postgrest/postgrest.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase/supabase_config.dart';
 import '../core/constants/app_constants.dart';
 import '../core/errors/app_exception.dart';
@@ -13,14 +15,31 @@ import '../core/utils/employee_code_generator.dart';
 import '../models/company_settings_model.dart';
 
 class SettingsService {
-  final _client = SupabaseConfig.client;
+  SupabaseClient get _client => SupabaseConfig.client;
 
   static const _id = 'singleton';
 
   // ─── Read ────────────────────────────────────────────────────────────────
 
   Future<CompanySettingsModel> getSettings() async {
-    debugPrint('[SettingsService] Fetching company settings');
+    debugPrint('[SettingsService] Fetching settings (org-aware)');
+    try {
+      // Try organizations table first — RLS returns user's own org row.
+      final orgRaw = await _client
+          .from(AppConstants.tableOrganizations)
+          .select()
+          .maybeSingle();
+      if (orgRaw != null) {
+        debugPrint('[SettingsService] Using organization settings');
+        return CompanySettingsModel.fromOrgJson(_decode(orgRaw));
+      }
+    } catch (e) {
+      // PGRST205/PGRST301 = table missing or no rows — fall through to singleton
+      debugPrint('[SettingsService] organizations fallback: $e');
+    }
+
+    // Fallback: legacy company_settings singleton
+    debugPrint('[SettingsService] Falling back to company_settings singleton');
     try {
       final raw = await _client
           .from(AppConstants.tableCompanySettings)
@@ -30,9 +49,7 @@ class SettingsService {
       if (raw == null) return CompanySettingsModel.defaults;
       return CompanySettingsModel.fromJson(_decode(raw));
     } catch (e, st) {
-      // PGRST205 = table not in schema cache (migration not run yet) → use defaults
       if (e is PostgrestException && e.code == 'PGRST205') {
-        debugPrint('[SettingsService] company_settings table not found — using defaults');
         return CompanySettingsModel.defaults;
       }
       debugPrint('[SettingsService] ERROR fetching settings: $e\n$st');
@@ -42,9 +59,26 @@ class SettingsService {
 
   // ─── Write ───────────────────────────────────────────────────────────────
 
-  Future<CompanySettingsModel> updatePattern(String pattern) async {
+  Future<CompanySettingsModel> updatePattern(String pattern,
+      {String? organizationId}) async {
     debugPrint('[SettingsService] Updating employee_code_pattern → $pattern');
     try {
+      if (organizationId != null) {
+        final raw = await _client
+            .from(AppConstants.tableOrganizations)
+            .update({
+              'employee_code_pattern': pattern,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', organizationId)
+            .select()
+            .maybeSingle();
+        if (raw == null) {
+          throw AppException(
+              'Organization not found or you do not have permission to update it.');
+        }
+        return CompanySettingsModel.fromOrgJson(_decode(raw));
+      }
       final raw = await _client
           .from(AppConstants.tableCompanySettings)
           .upsert({
@@ -61,9 +95,19 @@ class SettingsService {
     }
   }
 
-  Future<void> resetSequence() async {
+  Future<void> resetSequence({String? organizationId}) async {
     debugPrint('[SettingsService] Resetting employee_code_sequence → 0');
     try {
+      if (organizationId != null) {
+        await _client
+            .from(AppConstants.tableOrganizations)
+            .update({
+              'employee_code_sequence': 0,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', organizationId);
+        return;
+      }
       await _client
           .from(AppConstants.tableCompanySettings)
           .upsert({
@@ -74,6 +118,99 @@ class SettingsService {
     } catch (e, st) {
       debugPrint('[SettingsService] ERROR resetting sequence: $e\n$st');
       throw ErrorMapper.map(e, 'Failed to reset employee code sequence.');
+    }
+  }
+
+  Future<CompanySettingsModel> updateBranding({
+    String? organizationId,
+    String? systemTitle,
+    String? primaryColor,
+    String? logoUrl,
+  }) async {
+    debugPrint('[SettingsService] Updating branding settings');
+    try {
+      if (organizationId != null) {
+        final raw = await _client
+            .from(AppConstants.tableOrganizations)
+            .update({
+              if (systemTitle != null) 'system_title': systemTitle,
+              if (primaryColor != null) 'primary_color': primaryColor,
+              if (logoUrl != null) 'logo_url': logoUrl,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', organizationId)
+            .select()
+            .maybeSingle();
+        if (raw == null) {
+          throw AppException(
+              'Organization not found or you do not have permission to update it.');
+        }
+        return CompanySettingsModel.fromOrgJson(_decode(raw));
+      }
+      final raw = await _client
+          .from(AppConstants.tableCompanySettings)
+          .upsert({
+            'id': _id,
+            if (systemTitle != null) 'system_title': systemTitle,
+            if (primaryColor != null) 'primary_color': primaryColor,
+            if (logoUrl != null) 'logo_url': logoUrl,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+      return CompanySettingsModel.fromJson(_decode(raw));
+    } catch (e, st) {
+      debugPrint('[SettingsService] ERROR updating branding: $e\n$st');
+      throw ErrorMapper.map(e, 'Failed to save branding settings.');
+    }
+  }
+
+  // ─── Logo upload ─────────────────────────────────────────────────────────
+
+  /// Uploads [bytes] to the `logos` storage bucket and returns the public URL.
+  /// Always overwrites `logo.<ext>` so there is only ever one logo file.
+  Future<String> uploadLogo(Uint8List bytes, String fileName) async {
+    debugPrint('[SettingsService] Uploading logo: $fileName');
+    try {
+      final ext = fileName.contains('.')
+          ? fileName.split('.').last.toLowerCase()
+          : 'png';
+      final path = 'logo.$ext';
+      final mime = _mimeType(ext);
+
+      await _client.storage
+          .from(AppConstants.bucketLogos)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(upsert: true, contentType: mime),
+          );
+
+      final url = _client.storage
+          .from(AppConstants.bucketLogos)
+          .getPublicUrl(path);
+
+      debugPrint('[SettingsService] Logo uploaded → $url');
+      return url;
+    } catch (e, st) {
+      debugPrint('[SettingsService] ERROR uploading logo: $e\n$st');
+      throw ErrorMapper.map(e, 'Failed to upload logo.');
+    }
+  }
+
+  static String _mimeType(String ext) {
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'svg':
+        return 'image/svg+xml';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/png';
     }
   }
 

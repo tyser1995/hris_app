@@ -10,6 +10,19 @@ alter database postgres set search_path = hris, extensions;
 -- Apply immediately for this migration session.
 set search_path = hris, extensions;
 
+-- ── Grant schema access to Supabase roles ─────────────────────────────────────
+-- The public schema has these by default; custom schemas need them explicitly.
+grant usage on schema hris to anon, authenticated, service_role;
+
+alter default privileges in schema hris
+  grant all on tables to anon, authenticated, service_role;
+
+alter default privileges in schema hris
+  grant all on routines to anon, authenticated, service_role;
+
+alter default privileges in schema hris
+  grant all on sequences to anon, authenticated, service_role;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 
 create type user_role as enum ('admin', 'hr_staff', 'department_head', 'supervisor', 'employee');
