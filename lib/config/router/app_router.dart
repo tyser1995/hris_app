@@ -25,6 +25,8 @@ import '../../modules/self_service/screens/my_leave_screen.dart';
 import '../../modules/settings/screens/settings_screen.dart';
 import '../../modules/settings/screens/access_management_screen.dart';
 import '../../modules/settings/screens/branding_screen.dart';
+import '../../modules/settings/screens/data_management_screen.dart';
+import '../../modules/settings/screens/employment_types_screen.dart';
 import '../../modules/super_admin/screens/organizations_screen.dart';
 import '../../modules/super_admin/screens/create_admin_screen.dart';
 import '../../modules/user_management/screens/users_screen.dart';
@@ -194,6 +196,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'branding',
                 name: RouteNames.branding,
                 builder: (_, __) => const BrandingScreen(),
+              ),
+              GoRoute(
+                path: 'data-management',
+                name: RouteNames.dataManagement,
+                builder: (_, __) => const DataManagementScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'employment-types',
+                    name: RouteNames.employmentTypes,
+                    builder: (_, __) => const EmploymentTypesScreen(),
+                  ),
+                ],
               ),
             ],
           ),

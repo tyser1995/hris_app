@@ -26,6 +26,8 @@ class RouteNames {
   static const String settings = 'settings';
   static const String accessManagement = 'access-management';
   static const String branding = 'branding';
+  static const String dataManagement = 'data-management';
+  static const String employmentTypes = 'employment-types';
   static const String superAdmin = 'super-admin';
   static const String createAdmin = 'create-admin';
   static const String users = 'users';

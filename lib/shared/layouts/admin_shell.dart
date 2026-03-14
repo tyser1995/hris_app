@@ -49,6 +49,7 @@ class AdminShell extends ConsumerWidget {
     _NavItem(icon: Icons.badge_outlined,            selectedIcon: Icons.badge_rounded,                 label: 'ID Management',        route: '/settings'),
     _NavItem(icon: Icons.manage_accounts_outlined,  selectedIcon: Icons.manage_accounts_rounded,       label: 'Access Management',    route: '/settings/access'),
     _NavItem(icon: Icons.palette_outlined,          selectedIcon: Icons.palette_rounded,               label: 'Branding',             route: '/settings/branding'),
+    _NavItem(icon: Icons.storage_outlined,          selectedIcon: Icons.storage_rounded,               label: 'Data Management',      route: '/settings/data-management'),
   ];
 
   // Extra sidebar items shown only for admin/hr
