@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../core/constants/app_permissions.dart';
 import '../models/attendance_model.dart';
 import '../models/company_settings_model.dart';
@@ -5,14 +6,18 @@ import '../models/department_model.dart';
 import '../models/employee_model.dart';
 import '../models/leave_request_model.dart';
 import '../models/notification_model.dart';
+import '../models/org_user_model.dart';
+import '../models/organization_model.dart';
 import '../models/position_model.dart';
 import '../services/attendance_service.dart';
 import '../services/department_service.dart';
 import '../services/employee_service.dart';
 import '../services/leave_service.dart';
 import '../services/notification_service.dart';
+import '../services/organization_service.dart';
 import '../services/permission_service.dart';
 import '../services/settings_service.dart';
+import '../services/user_management_service.dart';
 import 'mock_data_store.dart';
 
 // ─── Employee ─────────────────────────────────────────────────────────────────
@@ -364,13 +369,35 @@ class MockSettingsService extends SettingsService {
   Future<CompanySettingsModel> getSettings() async => _settings;
 
   @override
-  Future<CompanySettingsModel> updatePattern(String pattern) async {
+  Future<CompanySettingsModel> updatePattern(String pattern,
+      {String? organizationId}) async {
     _settings = _settings.copyWith(employeeCodePattern: pattern);
     return _settings;
   }
 
   @override
-  Future<void> resetSequence() async {
+  Future<CompanySettingsModel> updateBranding({
+    String? organizationId,
+    String? systemTitle,
+    String? primaryColor,
+    String? logoUrl,
+  }) async {
+    _settings = _settings.copyWith(
+      systemTitle: systemTitle,
+      primaryColor: primaryColor,
+      logoUrl: logoUrl,
+    );
+    return _settings;
+  }
+
+  @override
+  Future<String> uploadLogo(Uint8List bytes, String fileName) async {
+    // In mock mode, return a placeholder — no actual upload.
+    return 'https://placehold.co/64x64/2563EB/FFFFFF?text=Logo';
+  }
+
+  @override
+  Future<void> resetSequence({String? organizationId}) async {
     _seq = 0;
     _settings = _settings.copyWith(employeeCodeSequence: 0);
   }
@@ -400,6 +427,96 @@ class MockSettingsService extends SettingsService {
         .replaceAll('DD', now.day.toString().padLeft(2, '0'))
         .replaceAll('####', seq.toString().padLeft(4, '0'))
         .replaceAll('###', seq.toString().padLeft(3, '0'));
+  }
+}
+
+// ─── User Management ──────────────────────────────────────────────────────────
+
+class MockUserManagementService extends UserManagementService {
+  final _extraUsers = <OrgUserModel>[];
+
+  @override
+  Future<List<OrgUserModel>> getOrgUsers() async =>
+      [...MockDataStore.orgUsers, ..._extraUsers];
+
+  @override
+  Future<OrgUserModel> createUser({
+    required String email,
+    String? password,
+    required bool autoConfirm,
+    required String role,
+    required String organizationId,
+  }) async {
+    final user = OrgUserModel(
+      userId: 'mock-user-${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      role: role,
+      organizationId: organizationId,
+      createdAt: DateTime.now(),
+      emailConfirmedAt: autoConfirm ? DateTime.now() : null,
+    );
+    _extraUsers.add(user);
+    return user;
+  }
+
+  @override
+  Future<OrgUserModel> inviteUser({
+    required String email,
+    required String role,
+  }) async {
+    final user = OrgUserModel(
+      userId: 'mock-user-${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      role: role,
+      organizationId: 'org-demo',
+      createdAt: DateTime.now(),
+      // emailConfirmedAt null — invite pending
+    );
+    _extraUsers.add(user);
+    return user;
+  }
+}
+
+// ─── Organization ─────────────────────────────────────────────────────────────
+
+class MockOrganizationService extends OrganizationService {
+  final _extraOrgs = <OrganizationModel>[];
+
+  @override
+  Future<List<OrganizationModel>> getOrganizations() async =>
+      [...MockDataStore.organizations, ..._extraOrgs];
+
+  @override
+  Future<Map<String, dynamic>> createAdminAccount({
+    required String orgName,
+    required String email,
+    bool autoConfirm = false,
+    String? password,
+  }) async {
+    final now = DateTime.now();
+    final org = OrganizationModel(
+      id: 'org-${now.millisecondsSinceEpoch}',
+      name: orgName,
+      systemTitle: '$orgName HRIS',
+      employeeCodePattern: 'YY-###',
+      employeeCodeSequence: 0,
+      createdAt: now,
+    );
+    _extraOrgs.add(org);
+    return {
+      'organization': {
+        'id': org.id,
+        'name': org.name,
+        'systemTitle': org.systemTitle,
+      },
+      'user': {
+        'id': 'mock-admin-${now.millisecondsSinceEpoch}',
+        'email': email,
+      },
+      'message': autoConfirm
+          ? 'Admin account for $email created. They can log in immediately.'
+          : 'Invitation email sent to $email.',
+    };
   }
 }
 

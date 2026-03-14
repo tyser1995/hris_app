@@ -282,6 +282,23 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
+# ── Edge function JWT configuration ───────────────────────────────────────────
+# These functions perform their own JWT + role verification internally.
+# Disabling gateway-level JWT verification lets them handle auth and return
+# meaningful error messages instead of a bare {"code":401,"message":"Invalid JWT"}.
+# For production, deploy with: supabase functions deploy <name> --no-verify-jwt
+[functions.create-user]
+verify_jwt = false
+
+[functions.create-admin-user]
+verify_jwt = false
+
+[functions.invite-user]
+verify_jwt = false
+
+[functions.delete-organization]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Configure one of the supported request policies: `oneshot`, `per_worker`.

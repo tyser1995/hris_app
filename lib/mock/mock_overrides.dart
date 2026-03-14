@@ -9,8 +9,10 @@ import '../providers/department_provider.dart';
 import '../providers/employee_provider.dart';
 import '../providers/leave_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/organization_provider.dart';
 import '../providers/permission_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/user_management_provider.dart';
 import 'mock_data_store.dart';
 import 'mock_services.dart';
 
@@ -46,6 +48,10 @@ class MockOverrides {
             .overrideWithValue(MockSettingsService()),
         permissionServiceProvider
             .overrideWithValue(MockPermissionService()),
+        userManagementServiceProvider
+            .overrideWithValue(MockUserManagementService()),
+        organizationServiceProvider
+            .overrideWithValue(MockOrganizationService()),
 
         // ── Dashboard ────────────────────────────────────────────────────────
         dashboardMetricsProvider.overrideWith((ref) async => const DashboardMetrics(

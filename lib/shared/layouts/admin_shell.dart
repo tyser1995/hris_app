@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/settings_provider.dart';
 import 'responsive_layout.dart';
 
 class AdminShell extends ConsumerWidget {
@@ -13,6 +15,14 @@ class AdminShell extends ConsumerWidget {
   const AdminShell({super.key, required this.child});
 
   // ── Nav item definitions ────────────────────────────────────────────────
+
+  // Extra item shown for super_admin (prepended before regular nav)
+  static const _NavItem _organizationsItem = _NavItem(
+    icon: Icons.business_outlined,
+    selectedIcon: Icons.business_rounded,
+    label: 'Organizations',
+    route: '/super-admin',
+  );
 
   // Shown in mobile bottom bar (5 items)
   static const List<_NavItem> _mobileItems = [
@@ -38,6 +48,12 @@ class AdminShell extends ConsumerWidget {
   static const List<_NavItem> _settingsSubItems = [
     _NavItem(icon: Icons.badge_outlined,            selectedIcon: Icons.badge_rounded,                 label: 'ID Management',        route: '/settings'),
     _NavItem(icon: Icons.manage_accounts_outlined,  selectedIcon: Icons.manage_accounts_rounded,       label: 'Access Management',    route: '/settings/access'),
+    _NavItem(icon: Icons.palette_outlined,          selectedIcon: Icons.palette_rounded,               label: 'Branding',             route: '/settings/branding'),
+  ];
+
+  // Extra sidebar items shown only for admin/hr
+  static const List<_NavItem> _adminExtraItems = [
+    _NavItem(icon: Icons.group_outlined,            selectedIcon: Icons.group_rounded,                 label: 'Users',                route: '/users'),
   ];
 
   // Overflow items shown in the mobile "More" sheet
@@ -50,6 +66,8 @@ class AdminShell extends ConsumerWidget {
 
   static bool _isAdminOrHr(String role) =>
       role == 'admin' || role == 'hr_staff';
+
+  static bool _isSuperAdmin(String role) => role == 'super_admin';
 
   static int _indexFromLocation(String location, List<_NavItem> items) {
     for (int i = 0; i < items.length; i++) {
@@ -84,14 +102,32 @@ class AdminShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Activate the Realtime subscription for org settings changes.
+    // When any admin saves branding/settings, all users in the org auto-refresh.
+    ref.watch(orgSettingsRealtimeProvider);
+
     final unreadCount =
         ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
     final role = ref.watch(currentUserRoleProvider).valueOrNull ?? '';
     final location = GoRouterState.of(context).matchedLocation;
     final isAdminHr = _isAdminOrHr(role);
+    final isSuperAdmin = _isSuperAdmin(role);
 
-    final sidebarSelected = _indexFromLocation(location, _sidebarItems);
-    final mobileSelected  = _indexFromLocation(location, _mobileItems);
+    // super_admin gets Organizations first, then everything else
+    // admin/hr also get the Users item appended
+    final effectiveSidebarItems = [
+      if (isSuperAdmin) _organizationsItem,
+      ..._sidebarItems,
+      if (isAdminHr || isSuperAdmin) ..._adminExtraItems,
+    ];
+    final effectiveMobileItems = _mobileItems;
+    final effectiveSettingsItems =
+        (isAdminHr || isSuperAdmin) ? _settingsSubItems : const <_NavItem>[];
+
+    final sidebarSelected =
+        _indexFromLocation(location, effectiveSidebarItems);
+    final mobileSelected =
+        _indexFromLocation(location, effectiveMobileItems);
 
     void logout() => _confirmLogout(context, ref);
     void navigate(String route) => context.go(route);
@@ -100,9 +136,9 @@ class AdminShell extends ConsumerWidget {
       mobile: _MobileShell(
         child: child,
         selectedIndex: mobileSelected,
-        mobileItems: _mobileItems,
-        moreItems: _moreItems,
-        settingsSubItems: isAdminHr ? _settingsSubItems : const [],
+        mobileItems: effectiveMobileItems,
+        moreItems: isSuperAdmin ? const [] : _moreItems,
+        settingsSubItems: effectiveSettingsItems,
         unreadCount: unreadCount,
         role: role,
         onTap: navigate,
@@ -111,8 +147,8 @@ class AdminShell extends ConsumerWidget {
       tablet: _SidebarShell(
         child: child,
         selectedIndex: sidebarSelected,
-        navItems: _sidebarItems,
-        settingsSubItems: isAdminHr ? _settingsSubItems : const [],
+        navItems: effectiveSidebarItems,
+        settingsSubItems: effectiveSettingsItems,
         location: location,
         unreadCount: unreadCount,
         role: role,
@@ -123,8 +159,8 @@ class AdminShell extends ConsumerWidget {
       desktop: _SidebarShell(
         child: child,
         selectedIndex: sidebarSelected,
-        navItems: _sidebarItems,
-        settingsSubItems: isAdminHr ? _settingsSubItems : const [],
+        navItems: effectiveSidebarItems,
+        settingsSubItems: effectiveSettingsItems,
         location: location,
         unreadCount: unreadCount,
         role: role,
@@ -756,31 +792,52 @@ class _SidebarSubItem extends StatelessWidget {
 
 // ─── Sidebar sub-widgets ──────────────────────────────────────────────────────
 
-class _SidebarHeader extends StatelessWidget {
+class _SidebarHeader extends ConsumerWidget {
   final bool extended;
 
   const _SidebarHeader({required this.extended});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(companySettingsProvider).valueOrNull;
+    final systemTitle = settings?.systemTitle ?? AppStrings.appName;
+    final logoUrl = settings?.logoUrl;
+    final primaryColor =
+        parseHexColor(settings?.primaryColor) ?? AppColors.primary;
+
+    final logoWidget = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: logoUrl != null && logoUrl.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                logoUrl,
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.apartment_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            )
+          : const Icon(Icons.apartment_rounded, color: Colors.white, size: 20),
+    );
+
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisAlignment: extended
-            ? MainAxisAlignment.start
-            : MainAxisAlignment.center,
+        mainAxisAlignment:
+            extended ? MainAxisAlignment.start : MainAxisAlignment.center,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.apartment_rounded,
-                color: Colors.white, size: 20),
-          ),
+          logoWidget,
           if (extended) ...[
             const SizedBox(width: 12),
             Expanded(
@@ -789,7 +846,9 @@ class _SidebarHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    AppStrings.appName,
+                    systemTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -844,7 +903,7 @@ class _SidebarItem extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: extended ? 12 : 0),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.sidebarSelected
+                ? Theme.of(context).colorScheme.primary
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),

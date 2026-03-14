@@ -25,4 +25,9 @@ class RouteNames {
   static const String myLeave = 'my-leave';
   static const String settings = 'settings';
   static const String accessManagement = 'access-management';
+  static const String branding = 'branding';
+  static const String superAdmin = 'super-admin';
+  static const String createAdmin = 'create-admin';
+  static const String users = 'users';
+  static const String inviteUser = 'invite-user';
 }
