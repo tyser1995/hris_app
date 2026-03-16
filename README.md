@@ -118,7 +118,7 @@ supabase/
 │   └── 024_hris_security_fixes.sql       # Fixes auth_users_exposed, security_definer_view,
 │                                         # and rls_disabled on hris.roles
 ├── seeds/
-│   └── demo_data.sql       # Demo dataset — run manually via SQL Editor
+│   └── demo_data.sql       # Demo dataset — gitignored, run manually via SQL Editor
 ├── functions/              # Edge functions (TypeScript / Deno)
 │   ├── compute-attendance/       # Late/OT calculation
 │   ├── approve-leave/            # Approval workflow
@@ -129,7 +129,7 @@ supabase/
 │   ├── create-user/              # Creates a user within an org (admin only)
 │   ├── invite-user/              # Sends invitation email to a new user
 │   └── delete-organization/      # Deletes org and all associated admin accounts
-└── reset_to_hris.sql       # Drops all app objects and clears migration history (use with caution)
+└── reset_to_hris.sql       # Drops all app objects and clears migration history — gitignored, local use only
 ```
 
 ## Database Schema
@@ -299,7 +299,7 @@ The demo loads 21 employees across 4 departments with realistic attendance, leav
    supabase db push --password "your-db-password"
    ```
 
-   If you need to reset an existing database (e.g., tables ended up in the wrong schema), run `supabase/reset_to_hris.sql` in the Supabase SQL Editor first, then push:
+   If you need to reset an existing database (e.g., tables ended up in the wrong schema), run `supabase/reset_to_hris.sql` in the Supabase SQL Editor first (file is gitignored — local use only), then push:
    ```bash
    supabase db push --password "your-db-password" --debug
    ```
@@ -328,7 +328,7 @@ The demo loads 21 employees across 4 departments with realistic attendance, leav
 
 7. **(Optional) Seed demo data**
 
-   Run `supabase/seeds/demo_data.sql` in the Supabase SQL Editor to populate the database with 20 employees, 2 weeks of attendance history, leave requests, and notifications.
+   `supabase/seeds/demo_data.sql` is gitignored and not included in the repository. If you have the file locally, run it in the Supabase SQL Editor to populate the database with 20 employees, 2 weeks of attendance history, leave requests, and notifications.
 
 8. **Run the app**
    ```bash
