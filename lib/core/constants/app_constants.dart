@@ -16,6 +16,7 @@ class AppConstants {
   static const String tableCompanySettings = 'company_settings';
   static const String tableOrganizations = 'organizations';
   static const String tableEmploymentTypes = 'employment_types';
+  static const String tableLeaveTypes = 'leave_types';
 
   // Pagination
   static const int pageSize = 50;

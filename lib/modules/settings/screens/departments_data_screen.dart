@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../providers/employment_type_provider.dart';
-import '../../../providers/settings_provider.dart';
+import '../../../providers/department_provider.dart';
 
-class EmploymentTypesScreen extends ConsumerStatefulWidget {
-  const EmploymentTypesScreen({super.key});
+class DepartmentsDataScreen extends ConsumerStatefulWidget {
+  const DepartmentsDataScreen({super.key});
 
   @override
-  ConsumerState<EmploymentTypesScreen> createState() =>
-      _EmploymentTypesScreenState();
+  ConsumerState<DepartmentsDataScreen> createState() =>
+      _DepartmentsDataScreenState();
 }
 
-class _EmploymentTypesScreenState
-    extends ConsumerState<EmploymentTypesScreen> {
+class _DepartmentsDataScreenState
+    extends ConsumerState<DepartmentsDataScreen> {
   bool _isBusy = false;
 
   Future<void> _showUpsertDialog({String? id, String? initialName}) async {
@@ -25,13 +24,13 @@ class _EmploymentTypesScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(isEdit ? 'Edit Employment Type' : 'New Employment Type'),
+        title: Text(isEdit ? 'Edit Department' : 'New Department'),
         content: Form(
           key: formKey,
           child: TextFormField(
             controller: ctrl,
             autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: const InputDecoration(labelText: 'Department Name'),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Name is required.' : null,
             textCapitalization: TextCapitalization.words,
@@ -59,22 +58,18 @@ class _EmploymentTypesScreenState
     final name = ctrl.text.trim();
     setState(() => _isBusy = true);
     try {
-      final svc = ref.read(employmentTypeServiceProvider);
+      final svc = ref.read(departmentServiceProvider);
       if (isEdit) {
-        await svc.updateEmploymentType(id: id!, name: name);
+        await svc.updateDepartment(id!, name);
       } else {
-        final orgId =
-            ref.read(companySettingsProvider).valueOrNull?.organizationId;
-        if (orgId == null) throw Exception('No organization found.');
-        await svc.createEmploymentType(name: name, organizationId: orgId);
+        await svc.createDepartment(name);
       }
-      ref.invalidate(employmentTypesProvider);
+      ref.invalidate(departmentListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEdit
-                ? 'Employment type updated.'
-                : 'Employment type created.'),
+            content:
+                Text(isEdit ? 'Department updated.' : 'Department created.'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -93,10 +88,10 @@ class _EmploymentTypesScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Employment Type?'),
+        title: const Text('Delete Department?'),
         content: Text(
           '"$name" will be permanently removed. '
-          'Existing employees assigned this type will keep their current value.',
+          'Employees currently assigned to this department will not be deleted.',
         ),
         actions: [
           TextButton(
@@ -117,12 +112,12 @@ class _EmploymentTypesScreenState
 
     setState(() => _isBusy = true);
     try {
-      await ref.read(employmentTypeServiceProvider).deleteEmploymentType(id);
-      ref.invalidate(employmentTypesProvider);
+      await ref.read(departmentServiceProvider).deleteDepartment(id);
+      ref.invalidate(departmentListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Employment type deleted.'),
+            content: Text('Department deleted.'),
             backgroundColor: AppColors.warning,
           ),
         );
@@ -139,12 +134,12 @@ class _EmploymentTypesScreenState
 
   @override
   Widget build(BuildContext context) {
-    final typesAsync = ref.watch(employmentTypesProvider);
+    final deptAsync = ref.watch(departmentListProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: const Text('Employment Types'),
+        title: const Text('Departments'),
         backgroundColor: AppColors.surfaceLight,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -167,11 +162,11 @@ class _EmploymentTypesScreenState
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isBusy ? null : () => _showUpsertDialog(),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Type'),
-        backgroundColor: AppColors.primary,
+        label: const Text('Add Department'),
+        backgroundColor: AppColors.secondary,
         foregroundColor: Colors.white,
       ),
-      body: typesAsync.when(
+      body: deptAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -184,14 +179,14 @@ class _EmploymentTypesScreenState
               Text(e.toString()),
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: () => ref.invalidate(employmentTypesProvider),
+                onPressed: () => ref.invalidate(departmentListProvider),
                 child: const Text('Retry'),
               ),
             ],
           ),
         ),
-        data: (types) {
-          if (types.isEmpty) {
+        data: (departments) {
+          if (departments.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -199,15 +194,15 @@ class _EmploymentTypesScreenState
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.06),
+                      color: AppColors.secondary.withOpacity(0.06),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.work_outline_rounded,
-                        size: 40, color: AppColors.primary),
+                    child: const Icon(Icons.account_tree_outlined,
+                        size: 40, color: AppColors.secondary),
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'No employment types yet.',
+                    'No departments yet.',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -215,7 +210,7 @@ class _EmploymentTypesScreenState
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Tap "Add Type" to create the first one.',
+                    'Tap "Add Department" to create the first one.',
                     style: TextStyle(color: AppColors.onSurfaceVariant),
                   ),
                 ],
@@ -225,10 +220,10 @@ class _EmploymentTypesScreenState
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
-            itemCount: types.length,
+            itemCount: departments.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              final type = types[i];
+              final dept = departments[i];
               return Container(
                 decoration: BoxDecoration(
                   color: AppColors.surfaceLight,
@@ -242,19 +237,27 @@ class _EmploymentTypesScreenState
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.secondary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.work_outline_rounded,
-                        size: 20, color: AppColors.primary),
+                    child: const Icon(Icons.account_tree_outlined,
+                        size: 20, color: AppColors.secondary),
                   ),
                   title: Text(
-                    type.name,
+                    dept.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
+                  subtitle: dept.headFullName != null
+                      ? Text(
+                          'Head: ${dept.headFullName}',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant),
+                        )
+                      : null,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -265,7 +268,7 @@ class _EmploymentTypesScreenState
                         onPressed: _isBusy
                             ? null
                             : () => _showUpsertDialog(
-                                id: type.id, initialName: type.name),
+                                id: dept.id, initialName: dept.name),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline_rounded,
@@ -273,7 +276,7 @@ class _EmploymentTypesScreenState
                         tooltip: 'Delete',
                         onPressed: _isBusy
                             ? null
-                            : () => _confirmDelete(type.id, type.name),
+                            : () => _confirmDelete(dept.id, dept.name),
                       ),
                     ],
                   ),
