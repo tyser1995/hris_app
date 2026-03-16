@@ -7,6 +7,10 @@
 # Claude Code local settings
 .claude/settings.local.json
 
+# Supabase — sensitive / local-only files
+supabase/reset_to_hris.sql
+supabase/seeds/demo_data.sql
+
 # Miscellaneous
 *.class
 *.log
