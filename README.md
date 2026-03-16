@@ -207,6 +207,28 @@ Employee IDs are generated from a configurable pattern in **Settings → ID Mana
 
 Sequence increments are handled atomically by the `generate-employee-code` edge function, which calls `hris.next_org_employee_code()` under a row-level lock to prevent duplicate codes under concurrent employee creation.
 
+## Data Management
+
+Admins and HR Staff can manage reference data per organization under **Settings → Data Management**:
+
+| List | Route | Seeded Defaults |
+|---|---|---|
+| Employment Types | `/settings/data-management/employment-types` | Regular, Job Order, Contractual, Faculty, Janitorial |
+| Departments | `/settings/data-management/departments` | Human Resources, Finance, Operations, IT, Administration |
+| Leave Types | `/settings/data-management/leave-types` | Vacation, Sick, Emergency, Maternity, Paternity, Leave Without Pay |
+
+All three lists are org-scoped (isolated by RLS), support full CRUD from the UI, and feed the dropdowns in employee forms and leave requests. The underlying `employment_type` and `leave_type` columns are plain `text` — the old Postgres enums were removed in migrations 020 and 023 respectively.
+
+## Security
+
+The `hris` schema is hardened against the Supabase security linter advisories:
+
+| Advisory | Object | Fix applied (migration 024) |
+|---|---|---|
+| `auth_users_exposed` | `hris.super_admins` view | Revoked access from `anon`, `authenticated`, and `public`; only `service_role` retains SELECT |
+| `security_definer_view` | `hris.super_admins` view | Recreated with `WITH (security_invoker = on)` — runs under caller's privileges, not the view owner's |
+| `rls_disabled_in_public` | `hris.roles` | RLS enabled; authenticated users may SELECT, no write policies |
+
 ## Error Handling
 
 All service methods map raw Supabase/network errors to typed `AppException` subtypes via `ErrorMapper`:
