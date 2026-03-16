@@ -72,6 +72,34 @@ class DepartmentService {
     }
   }
 
+  Future<DepartmentModel> updateDepartment(
+      String id, String name) async {
+    try {
+      final raw = await _client
+          .from(AppConstants.tableDepartments)
+          .update({'name': name.trim()})
+          .eq('id', id)
+          .select()
+          .single();
+      return DepartmentModel.fromJson(_decodeMap(raw));
+    } catch (e, st) {
+      debugPrint('[DepartmentService] ERROR updating department: $e\n$st');
+      throw ErrorMapper.map(e, 'Failed to update department.');
+    }
+  }
+
+  Future<void> deleteDepartment(String id) async {
+    try {
+      await _client
+          .from(AppConstants.tableDepartments)
+          .delete()
+          .eq('id', id);
+    } catch (e, st) {
+      debugPrint('[DepartmentService] ERROR deleting department: $e\n$st');
+      throw ErrorMapper.map(e, 'Failed to delete department.');
+    }
+  }
+
   Future<PositionModel> createPosition(
       String title, {String? departmentId}) async {
     try {
