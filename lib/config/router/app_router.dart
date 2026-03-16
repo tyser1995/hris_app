@@ -27,6 +27,8 @@ import '../../modules/settings/screens/access_management_screen.dart';
 import '../../modules/settings/screens/branding_screen.dart';
 import '../../modules/settings/screens/data_management_screen.dart';
 import '../../modules/settings/screens/employment_types_screen.dart';
+import '../../modules/settings/screens/departments_data_screen.dart';
+import '../../modules/settings/screens/leave_types_screen.dart';
 import '../../modules/super_admin/screens/organizations_screen.dart';
 import '../../modules/super_admin/screens/create_admin_screen.dart';
 import '../../modules/user_management/screens/users_screen.dart';
@@ -206,6 +208,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'employment-types',
                     name: RouteNames.employmentTypes,
                     builder: (_, __) => const EmploymentTypesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'departments',
+                    name: RouteNames.departments,
+                    builder: (_, __) => const DepartmentsDataScreen(),
+                  ),
+                  GoRoute(
+                    path: 'leave-types',
+                    name: RouteNames.leaveTypes,
+                    builder: (_, __) => const LeaveTypesScreen(),
                   ),
                 ],
               ),

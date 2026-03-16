@@ -32,4 +32,6 @@ class RouteNames {
   static const String createAdmin = 'create-admin';
   static const String users = 'users';
   static const String inviteUser = 'invite-user';
+  static const String departments = 'departments-data';
+  static const String leaveTypes = 'leave-types';
 }
