@@ -29,8 +29,9 @@ A full-featured **Human Resource Information System** built with **Flutter** and
 | 11 | Settings — ID Management | Dynamic employee code pattern builder with live preview and atomic sequence counter |
 | 12 | Settings — Access Management | Per-role permission toggles across all features, managed from the UI |
 | 13 | Settings — Branding | Per-organization system title, logo, and primary color with live preview |
-| 14 | Super Admin Panel | Manage multiple organizations and their admin accounts from one place |
-| 15 | User Management | Invite or create users within an organization |
+| 14 | Settings — Data Management | CRUD for employment types, departments, and leave types — all org-scoped |
+| 15 | Super Admin Panel | Manage multiple organizations and their admin accounts from one place |
+| 16 | User Management | Invite or create users within an organization |
 
 ## Project Structure
 
@@ -44,20 +45,28 @@ lib/
 ├── config/
 │   ├── router/             # GoRouter setup, route names
 │   └── supabase/           # Supabase client config
-├── models/                 # JSON Serializable data models
+├── models/                 # Data models (Freezed + JSON Serializable)
 │   ├── company_settings_model.dart   # Org-aware settings (multi-tenant + legacy)
 │   ├── organization_model.dart
-│   └── org_user_model.dart
+│   ├── org_user_model.dart
+│   ├── employment_type_model.dart    # Dynamic employment type per org
+│   └── leave_type_model.dart         # Dynamic leave type per org
 ├── services/               # Supabase query logic (one file per domain)
 │   ├── settings_service.dart
 │   ├── organization_service.dart
 │   ├── user_management_service.dart
-│   └── permission_service.dart
+│   ├── permission_service.dart
+│   ├── department_service.dart       # Departments + positions (CRUD)
+│   ├── employment_type_service.dart  # Employment types CRUD
+│   └── leave_type_service.dart       # Leave types CRUD
 ├── providers/              # Riverpod state providers
 │   ├── settings_provider.dart        # companySettingsProvider (auth-aware)
 │   ├── organization_provider.dart
 │   ├── user_management_provider.dart
-│   └── permission_provider.dart
+│   ├── permission_provider.dart
+│   ├── department_provider.dart
+│   ├── employment_type_provider.dart
+│   └── leave_type_provider.dart
 ├── mock/                   # Demo/presentation mode (no Supabase required)
 │   ├── mock_data_store.dart          # 21 employees, attendance, leave, notifications
 │   ├── mock_services.dart            # Service subclasses with in-memory implementations
@@ -80,10 +89,14 @@ lib/
     └── settings/
         ├── settings_screen.dart           # ID Management (pattern + sequence)
         ├── access_management_screen.dart  # Role permission toggles
-        └── branding_screen.dart           # Logo, system title, primary color
+        ├── branding_screen.dart           # Logo, system title, primary color
+        ├── data_management_screen.dart    # Hub: Employment Types, Departments, Leave Types
+        ├── employment_types_screen.dart   # CRUD for org-scoped employment types
+        ├── departments_data_screen.dart   # CRUD for org-scoped departments
+        └── leave_types_screen.dart        # CRUD for org-scoped leave types
 
 supabase/
-├── migrations/             # 19 ordered SQL migration files
+├── migrations/             # 24 ordered SQL migration files
 │   ├── 001_create_roles.sql              # hris schema, user_role enum, user_roles
 │   ├── 002–008                           # Core tables: departments, employees, schedules,
 │   │                                     # attendance, leave, notifications, documents
@@ -97,7 +110,13 @@ supabase/
 │   ├── 016_add_organizations.sql         # organizations table, RLS, org-scoped employees
 │   ├── 017_user_management.sql           # get_org_users() security-definer function
 │   ├── 018_super_admin_setup.sql         # promote_to_super_admin() helper
-│   └── 019_enable_realtime_organizations.sql
+│   ├── 019_enable_realtime_organizations.sql
+│   ├── 020_employment_types.sql          # Dynamic employment_types table; migrates enum → text
+│   ├── 021_add_data_management_permission.sql  # Adds data_management permission to role matrix
+│   ├── 022_org_scope_departments.sql     # Adds organization_id to departments and positions
+│   ├── 023_leave_types.sql               # Dynamic leave_types table; migrates enum → text
+│   └── 024_hris_security_fixes.sql       # Fixes auth_users_exposed, security_definer_view,
+│                                         # and rls_disabled on hris.roles
 ├── seeds/
 │   └── demo_data.sql       # Demo dataset — run manually via SQL Editor
 ├── functions/              # Edge functions (TypeScript / Deno)
@@ -127,11 +146,13 @@ All tables and functions live in the **`hris` schema**. The `public` schema is u
 | `hris.departments` / `hris.positions` | Org structure |
 | `hris.schedules` / `hris.schedule_details` | Shift configuration |
 | `hris.attendance` | Daily logs (~2.9M rows/year), indexed for performance |
-| `hris.leave_requests` / `hris.leave_balances` | Leave tracking |
+| `hris.leave_requests` / `hris.leave_balances` | Leave tracking (leave_type stored as text after migration 023) |
 | `hris.notifications` | In-app notifications |
 | `hris.employee_documents` | Contract and ID storage |
 | `hris.company_settings` | Legacy singleton settings (pre-multi-tenant) |
 | `hris.role_permissions` | Per-role feature permission matrix (15 permissions × 5 roles) |
+| `hris.employment_types` | Org-scoped employment type list (replaces the old employment_type enum) |
+| `hris.leave_types` | Org-scoped leave type list (replaces the old leave_type enum) |
 
 ### Database functions
 
